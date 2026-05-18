@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, instrument};
 
 use crate::blocking::Provider;
 use crate::ProviderId;
@@ -30,9 +30,9 @@ impl Provider for Akamai {
 
     /// Tries to identify Akamai using all the implemented options.
     fn identify(&self, tx: SyncSender<ProviderId>, timeout: Duration) {
-        info!("Checking Akamai Cloud");
+        debug!("Checking Akamai Cloud");
         if self.check_metadata_server(METADATA_URI, timeout) {
-            info!("Identified Akamai Cloud");
+            debug!("Identified Akamai Cloud");
             let res = tx.send(IDENTIFIER);
 
             if let Err(err) = res {
@@ -61,17 +61,17 @@ impl Akamai {
             .send()
         {
             Ok(resp) => resp.text().unwrap_or_else(|err| {
-                error!("Error reading token: {:?}", err);
+                debug!("Error reading token: {:?}", err);
                 String::new()
             }),
             Err(err) => {
-                error!("Error making request: {:?}", err);
+                debug!("Error making request: {:?}", err);
                 return false;
             }
         };
 
         if token.is_empty() {
-            error!("Token is empty");
+            debug!("Token is empty");
             return false;
         }
 
@@ -89,7 +89,7 @@ impl Akamai {
         {
             Ok(resp) => resp.json::<MetadataResponse>(),
             Err(err) => {
-                error!("Error making request: {:?}", err);
+                debug!("Error making request: {:?}", err);
                 return false;
             }
         };
@@ -97,7 +97,7 @@ impl Akamai {
         match resp {
             Ok(metadata) => metadata.id > 0 && !metadata.host_uuid.is_empty(),
             Err(err) => {
-                error!("Error reading response: {:?}", err);
+                debug!("Error reading response: {:?}", err);
                 false
             }
         }

@@ -5,7 +5,7 @@ use std::path::Path;
 use std::sync::mpsc::SyncSender;
 use std::time::Duration;
 
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, instrument};
 
 use crate::blocking::Provider;
 use crate::ProviderId;
@@ -25,10 +25,10 @@ impl Provider for Alibaba {
     /// Tries to identify Alibaba Cloud using all the implemented options.
     #[instrument(skip_all)]
     fn identify(&self, tx: SyncSender<ProviderId>, timeout: Duration) {
-        info!("Checking Alibaba Cloud");
+        debug!("Checking Alibaba Cloud");
         if self.check_vendor_file(VENDOR_FILE) || self.check_metadata_server(METADATA_URI, timeout)
         {
-            info!("Identified Alibaba Cloud");
+            debug!("Identified Alibaba Cloud");
             if let Err(err) = tx.send(IDENTIFIER) {
                 error!("Error sending message: {:?}", err);
             }
@@ -57,12 +57,12 @@ impl Alibaba {
             Ok(resp) => match resp.text() {
                 Ok(text) => text.contains("ECS Virt"),
                 Err(err) => {
-                    error!("Error reading response: {:?}", err);
+                    debug!("Error reading response: {:?}", err);
                     false
                 }
             },
             Err(err) => {
-                error!("Error sending request: {:?}", err);
+                debug!("Error sending request: {:?}", err);
                 false
             }
         }
@@ -81,7 +81,7 @@ impl Alibaba {
             return match fs::read_to_string(vendor_file) {
                 Ok(content) => content.contains("Alibaba Cloud ECS"),
                 Err(err) => {
-                    error!("Error reading file: {:?}", err);
+                    debug!("Error reading file: {:?}", err);
                     false
                 }
             };

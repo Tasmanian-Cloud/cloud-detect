@@ -6,7 +6,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use tokio::fs;
 use tokio::sync::mpsc::Sender;
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, instrument};
 
 use crate::{Provider, ProviderId};
 
@@ -35,13 +35,13 @@ impl Provider for OpenStack {
     /// Tries to identify OpenStack using all the implemented options.
     #[instrument(skip_all)]
     async fn identify(&self, tx: Sender<ProviderId>, timeout: Duration) {
-        info!("Checking OpenStack");
+        debug!("Checking OpenStack");
         if self
             .check_vendor_files(PRODUCT_NAME_FILE, CHASSIS_ASSET_TAG_FILE)
             .await
             || self.check_metadata_server(METADATA_URI, timeout).await
         {
-            info!("Identified OpenStack");
+            debug!("Identified OpenStack");
             let res = tx.send(IDENTIFIER).await;
 
             if let Err(err) = res {
@@ -68,7 +68,7 @@ impl OpenStack {
         match client.get(url).send().await {
             Ok(resp) => resp.status().is_success(),
             Err(err) => {
-                error!("Error making request: {:?}", err);
+                debug!("Error making request: {:?}", err);
                 false
             }
         }
@@ -95,7 +95,7 @@ impl OpenStack {
                     }
                 }
                 Err(err) => {
-                    error!("Error reading file: {:?}", err);
+                    debug!("Error reading file: {:?}", err);
                 }
             }
         }
@@ -117,7 +117,7 @@ impl OpenStack {
                     }
                 }
                 Err(err) => {
-                    error!("Error reading file: {:?}", err);
+                    debug!("Error reading file: {:?}", err);
                 }
             }
         }

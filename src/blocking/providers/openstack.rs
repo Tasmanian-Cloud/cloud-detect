@@ -6,7 +6,7 @@ use std::sync::mpsc::SyncSender;
 use std::time::Duration;
 
 use reqwest::blocking::Client;
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, instrument};
 
 use crate::blocking::Provider;
 use crate::ProviderId;
@@ -35,11 +35,11 @@ impl Provider for OpenStack {
     /// Tries to identify OpenStack using all the implemented options.
     #[instrument(skip_all)]
     fn identify(&self, tx: SyncSender<ProviderId>, timeout: Duration) {
-        info!("Checking OpenStack");
+        debug!("Checking OpenStack");
         if self.check_vendor_files(PRODUCT_NAME_FILE, CHASSIS_ASSET_TAG_FILE)
             || self.check_metadata_server(METADATA_URI, timeout)
         {
-            info!("Identified OpenStack");
+            debug!("Identified OpenStack");
             if let Err(err) = tx.send(IDENTIFIER) {
                 error!("Error sending message: {:?}", err);
             }
@@ -64,7 +64,7 @@ impl OpenStack {
         match client.get(url).send() {
             Ok(resp) => resp.status().is_success(),
             Err(err) => {
-                error!("Error making request: {:?}", err);
+                debug!("Error making request: {:?}", err);
                 false
             }
         }
@@ -91,7 +91,7 @@ impl OpenStack {
                     }
                 }
                 Err(err) => {
-                    error!("Error reading file: {:?}", err);
+                    debug!("Error reading file: {:?}", err);
                 }
             };
         }
@@ -110,7 +110,7 @@ impl OpenStack {
                     }
                 }
                 Err(err) => {
-                    error!("Error reading file: {:?}", err);
+                    debug!("Error reading file: {:?}", err);
                 }
             };
         }

@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, instrument};
 
 use crate::blocking::Provider;
 use crate::ProviderId;
@@ -35,13 +35,13 @@ impl Provider for Aws {
 
     /// Tries to identify AWS using all the implemented options.
     fn identify(&self, tx: SyncSender<ProviderId>, timeout: Duration) {
-        info!("Checking Amazon Web Services");
+        debug!("Checking Amazon Web Services");
         if self.check_product_version_file(PRODUCT_VERSION_FILE)
             || self.check_bios_vendor_file(BIOS_VENDOR_FILE)
             || self.check_metadata_server_imdsv2(METADATA_URI, timeout)
             || self.check_metadata_server_imdsv1(METADATA_URI, timeout)
         {
-            info!("Identified Amazon Web Services");
+            debug!("Identified Amazon Web Services");
             if let Err(err) = tx.send(IDENTIFIER) {
                 error!("Error sending message: {:?}", err);
             }
@@ -69,17 +69,17 @@ impl Aws {
             .send()
         {
             Ok(resp) => resp.text().unwrap_or_else(|err| {
-                error!("Error reading token: {:?}", err);
+                debug!("Error reading token: {:?}", err);
                 String::new()
             }),
             Err(err) => {
-                error!("Error making request: {:?}", err);
+                debug!("Error making request: {:?}", err);
                 return false;
             }
         };
 
         if token.is_empty() {
-            error!("IMDSv2 token is empty");
+            debug!("IMDSv2 token is empty");
             return false;
         }
 
@@ -97,7 +97,7 @@ impl Aws {
         {
             Ok(resp) => resp.json::<MetadataResponse>(),
             Err(err) => {
-                error!("Error making request: {:?}", err);
+                debug!("Error making request: {:?}", err);
                 return false;
             }
         };
@@ -107,7 +107,7 @@ impl Aws {
                 metadata.image_id.starts_with("ami-") && metadata.instance_id.starts_with("i-")
             }
             Err(err) => {
-                error!("Error reading response: {:?}", err);
+                debug!("Error reading response: {:?}", err);
                 false
             }
         }
@@ -132,12 +132,12 @@ impl Aws {
                     metadata.image_id.starts_with("ami-") && metadata.instance_id.starts_with("i-")
                 }
                 Err(err) => {
-                    error!("Error reading response: {:?}", err);
+                    debug!("Error reading response: {:?}", err);
                     false
                 }
             },
             Err(err) => {
-                error!("Error making request: {:?}", err);
+                debug!("Error making request: {:?}", err);
                 false
             }
         }
@@ -156,7 +156,7 @@ impl Aws {
             return match std::fs::read_to_string(product_version_file) {
                 Ok(content) => content.to_lowercase().contains("amazon"),
                 Err(err) => {
-                    error!("Error reading file: {:?}", err);
+                    debug!("Error reading file: {:?}", err);
                     false
                 }
             };
@@ -178,7 +178,7 @@ impl Aws {
             return match std::fs::read_to_string(bios_vendor_file) {
                 Ok(content) => content.to_lowercase().contains("amazon"),
                 Err(err) => {
-                    error!("Error reading file: {:?}", err);
+                    debug!("Error reading file: {:?}", err);
                     false
                 }
             };

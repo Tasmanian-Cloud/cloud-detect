@@ -6,7 +6,7 @@ use std::sync::mpsc::SyncSender;
 use std::time::Duration;
 
 use reqwest::blocking::Client;
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, instrument};
 
 use crate::blocking::Provider;
 use crate::ProviderId;
@@ -26,10 +26,10 @@ impl Provider for Gcp {
     /// Tries to identify GCP using all the implemented options.
     #[instrument(skip_all)]
     fn identify(&self, tx: SyncSender<ProviderId>, timeout: Duration) {
-        info!("Checking Google Cloud Platform");
+        debug!("Checking Google Cloud Platform");
         if self.check_vendor_file(VENDOR_FILE) || self.check_metadata_server(METADATA_URI, timeout)
         {
-            info!("Identified Google Cloud Platform");
+            debug!("Identified Google Cloud Platform");
             if let Err(err) = tx.send(IDENTIFIER) {
                 error!("Error sending message: {:?}", err);
             }
@@ -57,7 +57,7 @@ impl Gcp {
         match resp {
             Ok(resp) => resp.status().is_success(),
             Err(err) => {
-                error!("Error making request: {:?}", err);
+                debug!("Error making request: {:?}", err);
                 false
             }
         }
@@ -76,7 +76,7 @@ impl Gcp {
             return match fs::read_to_string(vendor_file) {
                 Ok(content) => content.contains("Google"),
                 Err(err) => {
-                    error!("Error reading vendor file: {:?}", err);
+                    debug!("Error reading vendor file: {:?}", err);
                     false
                 }
             };

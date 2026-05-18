@@ -6,7 +6,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use tokio::fs;
 use tokio::sync::mpsc::Sender;
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, instrument};
 
 use crate::{Provider, ProviderId};
 
@@ -26,11 +26,11 @@ impl Provider for Gcp {
     /// Tries to identify GCP using all the implemented options.
     #[instrument(skip_all)]
     async fn identify(&self, tx: Sender<ProviderId>, timeout: Duration) {
-        info!("Checking Google Cloud Platform");
+        debug!("Checking Google Cloud Platform");
         if self.check_vendor_file(VENDOR_FILE).await
             || self.check_metadata_server(METADATA_URI, timeout).await
         {
-            info!("Identified Google Cloud Platform");
+            debug!("Identified Google Cloud Platform");
             let res = tx.send(IDENTIFIER).await;
 
             if let Err(err) = res {
@@ -60,7 +60,7 @@ impl Gcp {
         match resp {
             Ok(resp) => resp.status().is_success(),
             Err(err) => {
-                error!("Error making request: {:?}", err);
+                debug!("Error making request: {:?}", err);
                 false
             }
         }
@@ -79,7 +79,7 @@ impl Gcp {
             return match fs::read_to_string(vendor_file).await {
                 Ok(content) => content.contains("Google"),
                 Err(err) => {
-                    error!("Error reading file: {:?}", err);
+                    debug!("Error reading file: {:?}", err);
                     false
                 }
             };

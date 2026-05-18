@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
 use tokio::sync::mpsc::Sender;
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, instrument};
 
 use crate::{Provider, ProviderId};
 
@@ -33,11 +33,11 @@ impl Provider for Oci {
     /// Tries to identify OCI using all the implemented options.
     #[instrument(skip_all)]
     async fn identify(&self, tx: Sender<ProviderId>, timeout: Duration) {
-        info!("Checking Oracle Cloud Infrastructure");
+        debug!("Checking Oracle Cloud Infrastructure");
         if self.check_vendor_file(VENDOR_FILE).await
             || self.check_metadata_server(METADATA_URI, timeout).await
         {
-            info!("Identified Oracle Cloud Infrastructure");
+            debug!("Identified Oracle Cloud Infrastructure");
             let res = tx.send(IDENTIFIER).await;
 
             if let Err(err) = res {
@@ -65,12 +65,12 @@ impl Oci {
             Ok(resp) => match resp.json::<MetadataResponse>().await {
                 Ok(resp) => resp.oke_tm.contains("oke"),
                 Err(err) => {
-                    error!("Error reading response: {:?}", err);
+                    debug!("Error reading response: {:?}", err);
                     false
                 }
             },
             Err(err) => {
-                error!("Error making request: {:?}", err);
+                debug!("Error making request: {:?}", err);
                 false
             }
         }
@@ -89,7 +89,7 @@ impl Oci {
             return match fs::read_to_string(vendor_file).await {
                 Ok(content) => content.contains("OracleCloud"),
                 Err(err) => {
-                    error!("Error reading file: {:?}", err);
+                    debug!("Error reading file: {:?}", err);
                     false
                 }
             };

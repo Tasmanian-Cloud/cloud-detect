@@ -5,7 +5,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::Sender;
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, instrument};
 
 use crate::{Provider, ProviderId};
 
@@ -31,9 +31,9 @@ impl Provider for Akamai {
     /// Tries to identify Akamai using all the implemented options.
     #[instrument(skip_all)]
     async fn identify(&self, tx: Sender<ProviderId>, timeout: Duration) {
-        info!("Checking Akamai Cloud");
+        debug!("Checking Akamai Cloud");
         if self.check_metadata_server(METADATA_URI, timeout).await {
-            info!("Identified Akamai Cloud");
+            debug!("Identified Akamai Cloud");
             let res = tx.send(IDENTIFIER).await;
 
             if let Err(err) = res {
@@ -52,7 +52,7 @@ impl Akamai {
         let client = if let Ok(client) = reqwest::Client::builder().timeout(timeout).build() {
             client
         } else {
-            error!("Error creating client");
+            error!("Error creating reqwest client");
             return false;
         };
 
@@ -63,17 +63,17 @@ impl Akamai {
             .await
         {
             Ok(resp) => resp.text().await.unwrap_or_else(|err| {
-                error!("Error reading token: {:?}", err);
+                debug!("Error reading token: {:?}", err);
                 String::new()
             }),
             Err(err) => {
-                error!("Error making request: {:?}", err);
+                debug!("Error making request: {:?}", err);
                 return false;
             }
         };
 
         if token.is_empty() {
-            error!("Token is empty");
+            debug!("Token is empty");
             return false;
         }
 
@@ -92,7 +92,7 @@ impl Akamai {
         {
             Ok(resp) => resp.json::<MetadataResponse>().await,
             Err(err) => {
-                error!("Error making request: {:?}", err);
+                debug!("Error making request: {:?}", err);
                 return false;
             }
         };
@@ -100,7 +100,7 @@ impl Akamai {
         match resp {
             Ok(metadata) => metadata.id > 0 && !metadata.host_uuid.is_empty(),
             Err(err) => {
-                error!("Error reading response: {:?}", err);
+                debug!("Error reading response: {:?}", err);
                 false
             }
         }

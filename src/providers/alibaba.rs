@@ -6,7 +6,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use tokio::fs;
 use tokio::sync::mpsc::Sender;
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, instrument};
 
 use crate::{Provider, ProviderId};
 
@@ -26,11 +26,11 @@ impl Provider for Alibaba {
     /// Tries to identify Alibaba Cloud using all the implemented options.
     #[instrument(skip_all)]
     async fn identify(&self, tx: Sender<ProviderId>, timeout: Duration) {
-        info!("Checking Alibaba Cloud");
+        debug!("Checking Alibaba Cloud");
         if self.check_vendor_file(VENDOR_FILE).await
             || self.check_metadata_server(METADATA_URI, timeout).await
         {
-            info!("Identified Alibaba Cloud");
+            debug!("Identified Alibaba Cloud");
             let res = tx.send(IDENTIFIER).await;
 
             if let Err(err) = res {
@@ -58,12 +58,12 @@ impl Alibaba {
             Ok(resp) => match resp.text().await {
                 Ok(text) => text.contains("ECS Virt"),
                 Err(err) => {
-                    error!("Error reading response: {:?}", err);
+                    debug!("Error reading response: {:?}", err);
                     false
                 }
             },
             Err(err) => {
-                error!("Error making request: {:?}", err);
+                debug!("Error making request: {:?}", err);
                 false
             }
         }
@@ -82,7 +82,7 @@ impl Alibaba {
             return match fs::read_to_string(vendor_file).await {
                 Ok(content) => content.contains("Alibaba Cloud ECS"),
                 Err(err) => {
-                    error!("Error reading file: {:?}", err);
+                    debug!("Error reading file: {:?}", err);
                     false
                 }
             };
