@@ -10,5 +10,6 @@ pub(crate) mod docker;
 pub(crate) mod gcp;
 pub(crate) mod oci;
 pub(crate) mod openstack;
-pub(crate) mod proxmox;
+pub(crate) mod proxmox_lxc;
+pub(crate) mod proxmox_vm;
 pub(crate) mod vultr;

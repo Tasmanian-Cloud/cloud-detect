@@ -1,14 +1,14 @@
-//! Proxmox VE.
+//! Proxmox VE (KVM virtual machine).
 
+use std::fs;
 use std::path::Path;
+use std::sync::mpsc::SyncSender;
 use std::time::Duration;
 
-use async_trait::async_trait;
-use tokio::fs;
-use tokio::sync::mpsc::Sender;
 use tracing::{debug, error, instrument};
 
-use crate::{Provider, ProviderId};
+use crate::blocking::Provider;
+use crate::ProviderId;
 
 const SYS_VENDOR_FILE: &str = "/sys/class/dmi/id/sys_vendor";
 const PRODUCT_NAME_FILE: &str = "/sys/class/dmi/id/product_name";
@@ -16,35 +16,29 @@ const VENDOR_NAME: &str = "proxmox";
 const QEMU_VENDOR_NAME: &str = "QEMU";
 // Matches both "Standard PC (i440FX + PIIX, 1996)" and "Standard PC (Q35 + ICH9, 2009)".
 const QEMU_PRODUCT_NAME: &str = "Standard PC";
-pub(crate) const IDENTIFIER: ProviderId = ProviderId::Proxmox;
+pub(crate) const IDENTIFIER: ProviderId = ProviderId::ProxmoxVm;
 
-pub(crate) struct Proxmox;
+pub(crate) struct ProxmoxVm;
 
-#[async_trait]
-impl Provider for Proxmox {
+impl Provider for ProxmoxVm {
     fn identifier(&self) -> ProviderId {
         IDENTIFIER
     }
 
     /// Tries to identify Proxmox using all the implemented options.
     #[instrument(skip_all)]
-    async fn identify(&self, tx: Sender<ProviderId>, _timeout: Duration) {
-        debug!("Checking Proxmox");
-        if self
-            .check_vendor_files(SYS_VENDOR_FILE, PRODUCT_NAME_FILE)
-            .await
-        {
-            debug!("Identified Proxmox");
-            let res = tx.send(IDENTIFIER).await;
-
-            if let Err(err) = res {
+    fn identify(&self, tx: SyncSender<ProviderId>, _timeout: Duration) {
+        debug!("Checking Proxmox VM");
+        if self.check_vendor_files(SYS_VENDOR_FILE, PRODUCT_NAME_FILE) {
+            debug!("Identified Proxmox VM");
+            if let Err(err) = tx.send(IDENTIFIER) {
                 error!("Error sending message: {:?}", err);
             }
         }
     }
 }
 
-impl Proxmox {
+impl ProxmoxVm {
     /// Tries to identify Proxmox using vendor file(s).
     ///
     /// Proxmox VE guests expose the default QEMU SMBIOS data ("QEMU" vendor and a
@@ -53,11 +47,7 @@ impl Proxmox {
     /// `qm set <vmid> --smbios1 manufacturer=Proxmox`) or the QEMU defaults.
     /// Note that the latter may also match other unbranded QEMU/KVM hosts.
     #[instrument(skip_all)]
-    async fn check_vendor_files<P: AsRef<Path>>(
-        &self,
-        sys_vendor_file: P,
-        product_name_file: P,
-    ) -> bool {
+    fn check_vendor_files<P: AsRef<Path>>(&self, sys_vendor_file: P, product_name_file: P) -> bool {
         debug!(
             "Checking {} vendor file: {}",
             IDENTIFIER,
@@ -67,7 +57,7 @@ impl Proxmox {
         let mut sys_vendor = String::new();
 
         if sys_vendor_file.as_ref().is_file() {
-            match fs::read_to_string(sys_vendor_file).await {
+            match fs::read_to_string(sys_vendor_file) {
                 Ok(content) => sys_vendor = content,
                 Err(err) => {
                     debug!("Error reading file: {:?}", err);
@@ -84,7 +74,7 @@ impl Proxmox {
         let mut product_name = String::new();
 
         if product_name_file.as_ref().is_file() {
-            match fs::read_to_string(product_name_file).await {
+            match fs::read_to_string(product_name_file) {
                 Ok(content) => product_name = content,
                 Err(err) => {
                     debug!("Error reading file: {:?}", err);
@@ -111,43 +101,39 @@ mod tests {
 
     use super::*;
 
-    #[tokio::test]
-    async fn test_check_vendor_files_branded_success() -> Result<()> {
+    #[test]
+    fn test_check_vendor_files_branded_success() -> Result<()> {
         let mut sys_vendor_file = NamedTempFile::new()?;
         let product_name_file = NamedTempFile::new()?;
 
         sys_vendor_file.write_all(b"Proxmox")?;
 
-        let provider = Proxmox;
-        let result = provider
-            .check_vendor_files(sys_vendor_file.path(), product_name_file.path())
-            .await;
+        let provider = ProxmoxVm;
+        let result = provider.check_vendor_files(sys_vendor_file.path(), product_name_file.path());
 
         assert!(result);
 
         Ok(())
     }
 
-    #[tokio::test]
-    async fn test_check_vendor_files_qemu_success() -> Result<()> {
+    #[test]
+    fn test_check_vendor_files_qemu_success() -> Result<()> {
         let mut sys_vendor_file = NamedTempFile::new()?;
         let mut product_name_file = NamedTempFile::new()?;
 
         sys_vendor_file.write_all(b"QEMU")?;
-        product_name_file.write_all(b"Standard PC (i440FX + PIIX, 1996)")?;
+        product_name_file.write_all(b"Standard PC (Q35 + ICH9, 2009)")?;
 
-        let provider = Proxmox;
-        let result = provider
-            .check_vendor_files(sys_vendor_file.path(), product_name_file.path())
-            .await;
+        let provider = ProxmoxVm;
+        let result = provider.check_vendor_files(sys_vendor_file.path(), product_name_file.path());
 
         assert!(result);
 
         Ok(())
     }
 
-    #[tokio::test]
-    async fn test_check_vendor_files_failure() -> Result<()> {
+    #[test]
+    fn test_check_vendor_files_failure() -> Result<()> {
         let mut sys_vendor_file = NamedTempFile::new()?;
         let mut product_name_file = NamedTempFile::new()?;
 
@@ -156,10 +142,8 @@ mod tests {
         sys_vendor_file.write_all(b"QEMU")?;
         product_name_file.write_all(b"Alibaba Cloud ECS")?;
 
-        let provider = Proxmox;
-        let result = provider
-            .check_vendor_files(sys_vendor_file.path(), product_name_file.path())
-            .await;
+        let provider = ProxmoxVm;
+        let result = provider.check_vendor_files(sys_vendor_file.path(), product_name_file.path());
 
         assert!(!result);
 
