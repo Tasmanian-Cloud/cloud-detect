@@ -86,9 +86,15 @@ pub enum ProviderId {
     /// Microsoft Azure.
     #[strum(serialize = "azure")]
     Azure,
+    /// BinaryLane.
+    #[strum(serialize = "binarylane")]
+    BinaryLane,
     /// DigitalOcean.
     #[strum(serialize = "digitalocean")]
     DigitalOcean,
+    /// Docker container.
+    #[strum(serialize = "docker")]
+    Docker,
     /// Google Cloud Platform (GCP).
     #[strum(serialize = "gcp")]
     GCP,
@@ -98,6 +104,9 @@ pub enum ProviderId {
     /// OpenStack.
     #[strum(serialize = "openstack")]
     OpenStack,
+    /// Proxmox VE.
+    #[strum(serialize = "proxmox")]
+    Proxmox,
     /// Vultr.
     #[strum(serialize = "vultr")]
     Vultr,
@@ -118,10 +127,13 @@ static PROVIDERS: LazyLock<Mutex<Vec<P>>> = LazyLock::new(|| {
         Arc::new(alibaba::Alibaba) as P,
         Arc::new(aws::Aws) as P,
         Arc::new(azure::Azure) as P,
+        Arc::new(binarylane::BinaryLane) as P,
         Arc::new(digitalocean::DigitalOcean) as P,
+        Arc::new(docker::Docker) as P,
         Arc::new(gcp::Gcp) as P,
         Arc::new(oci::Oci) as P,
         Arc::new(openstack::OpenStack) as P,
+        Arc::new(proxmox::Proxmox) as P,
         Arc::new(vultr::Vultr) as P,
     ])
 });
@@ -245,15 +257,18 @@ mod tests {
     #[tokio::test]
     async fn test_supported_providers() {
         let providers = supported_providers().await;
-        assert_eq!(providers.len(), 9);
+        assert_eq!(providers.len(), 12);
         assert!(providers.contains(&akamai::IDENTIFIER.to_string()));
         assert!(providers.contains(&alibaba::IDENTIFIER.to_string()));
         assert!(providers.contains(&aws::IDENTIFIER.to_string()));
         assert!(providers.contains(&azure::IDENTIFIER.to_string()));
+        assert!(providers.contains(&binarylane::IDENTIFIER.to_string()));
         assert!(providers.contains(&digitalocean::IDENTIFIER.to_string()));
+        assert!(providers.contains(&docker::IDENTIFIER.to_string()));
         assert!(providers.contains(&gcp::IDENTIFIER.to_string()));
         assert!(providers.contains(&oci::IDENTIFIER.to_string()));
         assert!(providers.contains(&openstack::IDENTIFIER.to_string()));
+        assert!(providers.contains(&proxmox::IDENTIFIER.to_string()));
         assert!(providers.contains(&vultr::IDENTIFIER.to_string()));
     }
 }

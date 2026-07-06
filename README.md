@@ -21,14 +21,31 @@ determine the cloud provider of a host.
   - Akamai Cloud (`akamai`)
   - Amazon Web Services (`aws`)
   - Microsoft Azure (`azure`)
+  - BinaryLane (`binarylane`)
   - Google Cloud Platform (`gcp`)
   - Alibaba Cloud (`alibaba`)
   - OpenStack (`openstack`)
   - DigitalOcean (`digitalocean`)
   - Oracle Cloud Infrastructure (`oci`)
   - Vultr (`vultr`)
+- Additionally, this module supports the identification of the following environments:
+  - Docker containers (`docker`)
+  - Proxmox VE virtual machines (`proxmox`)
 - Fast, simple and extensible.
 - Real-time console logging using the [`tracing`](https://crates.io/crates/tracing) crate.
+
+### Detection notes
+
+- **Docker** is detected via the `/.dockerenv` marker file or a `docker` entry in `/proc/self/cgroup`.
+  Since containers can run on any host, detection inside a container running on a supported cloud is a
+  race between the container check and the cloud's checks; the local file check typically wins, so
+  expect `docker` rather than the underlying cloud in that case.
+- **Proxmox VE** guests expose generic QEMU SMBIOS data by default (a `QEMU` system vendor and a
+  `Standard PC` product name), so detection relies on that fingerprint and may also match other
+  unbranded QEMU/KVM hosts. For unambiguous detection, brand your VMs on the Proxmox host with
+  `qm set <vmid> --smbios1 manufacturer=Proxmox`; explicit `Proxmox` branding is matched first.
+- **BinaryLane** does not provide a link-local metadata service, so detection relies on BinaryLane
+  branding in the guest's SMBIOS/DMI data (system vendor, product name or chassis asset tag).
 
 ## Usage
 
