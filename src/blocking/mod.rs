@@ -73,10 +73,14 @@ static PROVIDERS: LazyLock<Mutex<Vec<P>>> = LazyLock::new(|| {
         Arc::new(alibaba::Alibaba) as P,
         Arc::new(aws::Aws) as P,
         Arc::new(azure::Azure) as P,
+        Arc::new(binarylane::BinaryLane) as P,
         Arc::new(digitalocean::DigitalOcean) as P,
+        Arc::new(docker::Docker) as P,
         Arc::new(gcp::Gcp) as P,
         Arc::new(oci::Oci) as P,
         Arc::new(openstack::OpenStack) as P,
+        Arc::new(proxmox_lxc::ProxmoxLxc) as P,
+        Arc::new(proxmox_vm::ProxmoxVm) as P,
         Arc::new(vultr::Vultr) as P,
     ])
 });
@@ -165,15 +169,19 @@ mod tests {
     #[test]
     fn test_supported_providers() -> Result<()> {
         let providers = supported_providers()?;
-        assert_eq!(providers.len(), 9);
+        assert_eq!(providers.len(), 13);
         assert!(providers.contains(&akamai::IDENTIFIER.to_string()));
         assert!(providers.contains(&alibaba::IDENTIFIER.to_string()));
         assert!(providers.contains(&aws::IDENTIFIER.to_string()));
         assert!(providers.contains(&azure::IDENTIFIER.to_string()));
+        assert!(providers.contains(&binarylane::IDENTIFIER.to_string()));
         assert!(providers.contains(&digitalocean::IDENTIFIER.to_string()));
+        assert!(providers.contains(&docker::IDENTIFIER.to_string()));
         assert!(providers.contains(&gcp::IDENTIFIER.to_string()));
         assert!(providers.contains(&oci::IDENTIFIER.to_string()));
         assert!(providers.contains(&openstack::IDENTIFIER.to_string()));
+        assert!(providers.contains(&proxmox_lxc::IDENTIFIER.to_string()));
+        assert!(providers.contains(&proxmox_vm::IDENTIFIER.to_string()));
         assert!(providers.contains(&vultr::IDENTIFIER.to_string()));
 
         Ok(())

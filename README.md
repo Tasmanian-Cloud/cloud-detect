@@ -21,14 +21,39 @@ determine the cloud provider of a host.
   - Akamai Cloud (`akamai`)
   - Amazon Web Services (`aws`)
   - Microsoft Azure (`azure`)
+  - BinaryLane (`binarylane`)
   - Google Cloud Platform (`gcp`)
   - Alibaba Cloud (`alibaba`)
   - OpenStack (`openstack`)
   - DigitalOcean (`digitalocean`)
   - Oracle Cloud Infrastructure (`oci`)
   - Vultr (`vultr`)
+- Additionally, this module supports the identification of the following environments:
+  - Docker containers (`docker`)
+  - Proxmox VE KVM virtual machines (`proxmox-vm`)
+  - Proxmox VE LXC containers (`proxmox-lxc`)
+- Operating system detection (e.g. Alpine vs Debian) via `detect_os()`.
 - Fast, simple and extensible.
 - Real-time console logging using the [`tracing`](https://crates.io/crates/tracing) crate.
+
+### Detection notes
+
+- **Docker** is detected via the `/.dockerenv` marker file or a `docker` entry in `/proc/self/cgroup`.
+  Since containers can run on any host, detection inside a container running on a supported cloud is a
+  race between the container check and the cloud's checks; the local file check typically wins, so
+  expect `docker` rather than the underlying cloud in that case.
+- **Proxmox VE KVM virtual machines** (`proxmox-vm`) expose generic QEMU SMBIOS data by default (a
+  `QEMU` system vendor and a `Standard PC` product name), so detection relies on that fingerprint and
+  may also match other unbranded QEMU/KVM hosts. For unambiguous detection, brand your VMs on the
+  Proxmox host with `qm set <vmid> --smbios1 manufacturer=Proxmox`; explicit `Proxmox` branding is
+  matched first.
+- **Proxmox VE LXC containers** (`proxmox-lxc`) are detected via the `# --- BEGIN PVE ---` sections
+  that Proxmox writes into the container's `/etc/hosts`, `/etc/network/interfaces` and
+  `/etc/resolv.conf`. As a fallback, generic LXC markers are checked (`container=lxc` in
+  `/proc/1/environ`, which usually requires root, and `/run/systemd/container`); the fallback may
+  also match LXC containers managed by other platforms.
+- **BinaryLane** does not provide a link-local metadata service, so detection relies on BinaryLane
+  branding in the guest's SMBIOS/DMI data (system vendor, product name or chassis asset tag).
 
 ## Usage
 
@@ -122,6 +147,19 @@ fn main() {
 
     // When tested on local/non-supported cloud environment:
     println!("{}", provider); // "unknown"
+}
+```
+
+You can also detect the host's operating system (e.g. to tell Alpine from Debian). This is a
+synchronous function (it only reads a few small local files) and works with both the async and
+blocking APIs.
+
+```rust
+use cloud_detect::detect_os;
+
+fn main() {
+    let os = detect_os();
+    println!("{}", os); // e.g. "alpine", "debian", "ubuntu"; "unknown" if undetermined.
 }
 ```
 

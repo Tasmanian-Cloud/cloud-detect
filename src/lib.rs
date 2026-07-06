@@ -61,7 +61,10 @@ use crate::providers::*;
 
 #[cfg(feature = "blocking")]
 pub mod blocking;
+pub(crate) mod os;
 pub(crate) mod providers;
+
+pub use os::OsId;
 
 /// Maximum time allowed for detection.
 pub const DEFAULT_DETECTION_TIMEOUT: Duration = Duration::from_secs(5);
@@ -86,9 +89,15 @@ pub enum ProviderId {
     /// Microsoft Azure.
     #[strum(serialize = "azure")]
     Azure,
+    /// BinaryLane.
+    #[strum(serialize = "binarylane")]
+    BinaryLane,
     /// DigitalOcean.
     #[strum(serialize = "digitalocean")]
     DigitalOcean,
+    /// Docker container.
+    #[strum(serialize = "docker")]
+    Docker,
     /// Google Cloud Platform (GCP).
     #[strum(serialize = "gcp")]
     GCP,
@@ -98,6 +107,12 @@ pub enum ProviderId {
     /// OpenStack.
     #[strum(serialize = "openstack")]
     OpenStack,
+    /// Proxmox VE (LXC container).
+    #[strum(serialize = "proxmox-lxc")]
+    ProxmoxLxc,
+    /// Proxmox VE (KVM virtual machine).
+    #[strum(serialize = "proxmox-vm")]
+    ProxmoxVm,
     /// Vultr.
     #[strum(serialize = "vultr")]
     Vultr,
@@ -118,10 +133,14 @@ static PROVIDERS: LazyLock<Mutex<Vec<P>>> = LazyLock::new(|| {
         Arc::new(alibaba::Alibaba) as P,
         Arc::new(aws::Aws) as P,
         Arc::new(azure::Azure) as P,
+        Arc::new(binarylane::BinaryLane) as P,
         Arc::new(digitalocean::DigitalOcean) as P,
+        Arc::new(docker::Docker) as P,
         Arc::new(gcp::Gcp) as P,
         Arc::new(oci::Oci) as P,
         Arc::new(openstack::OpenStack) as P,
+        Arc::new(proxmox_lxc::ProxmoxLxc) as P,
+        Arc::new(proxmox_vm::ProxmoxVm) as P,
         Arc::new(vultr::Vultr) as P,
     ])
 });
@@ -238,6 +257,33 @@ pub async fn detect(timeout: Option<Duration>) -> ProviderId {
     }
 }
 
+/// Detects the host's operating system.
+///
+/// Returns [OsId::Unknown] if the operating system could not be determined. On Linux and other
+/// Unix-like systems, the [`os-release`](https://www.freedesktop.org/software/systemd/man/latest/os-release.html)
+/// file is used (with `/etc/alpine-release` and `/etc/debian_version` as fallbacks), so the
+/// distribution (e.g. Alpine vs Debian) is identified. On Windows and macOS the result is
+/// determined at compile time.
+///
+/// This is a synchronous function since it only reads a few small local files and performs no
+/// network I/O. It is available regardless of whether the `blocking` feature is enabled.
+///
+/// # Examples
+///
+/// Detect the operating system and print the result.
+///
+/// ```
+/// use cloud_detect::detect_os;
+///
+/// fn main() {
+///     let os = detect_os();
+///     println!("Detected OS: {}", os); // e.g. "alpine", "debian", "ubuntu"
+/// }
+/// ```
+pub fn detect_os() -> OsId {
+    os::detect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -245,15 +291,19 @@ mod tests {
     #[tokio::test]
     async fn test_supported_providers() {
         let providers = supported_providers().await;
-        assert_eq!(providers.len(), 9);
+        assert_eq!(providers.len(), 13);
         assert!(providers.contains(&akamai::IDENTIFIER.to_string()));
         assert!(providers.contains(&alibaba::IDENTIFIER.to_string()));
         assert!(providers.contains(&aws::IDENTIFIER.to_string()));
         assert!(providers.contains(&azure::IDENTIFIER.to_string()));
+        assert!(providers.contains(&binarylane::IDENTIFIER.to_string()));
         assert!(providers.contains(&digitalocean::IDENTIFIER.to_string()));
+        assert!(providers.contains(&docker::IDENTIFIER.to_string()));
         assert!(providers.contains(&gcp::IDENTIFIER.to_string()));
         assert!(providers.contains(&oci::IDENTIFIER.to_string()));
         assert!(providers.contains(&openstack::IDENTIFIER.to_string()));
+        assert!(providers.contains(&proxmox_lxc::IDENTIFIER.to_string()));
+        assert!(providers.contains(&proxmox_vm::IDENTIFIER.to_string()));
         assert!(providers.contains(&vultr::IDENTIFIER.to_string()));
     }
 }
