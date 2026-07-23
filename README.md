@@ -91,37 +91,39 @@ fn main() {
 Detect the cloud provider and print the result (with custom timeout; async).
 
 ```rust
+use std::time::Duration;
 use cloud_detect::detect;
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt::init(); // Optional; for logging
+  tracing_subscriber::fmt::init(); // Optional; for logging
 
-    let provider = detect(Some(10)).await;
+  let provider = detect(Some(Duration::from_secs(10))).await;
 
-    // When tested on AWS:
-    println!("{}", provider); // "aws"
+  // When tested on AWS:
+  println!("{}", provider); // "aws"
 
-    // When tested on local/non-supported cloud environment:
-    println!("{}", provider); // "unknown"
+  // When tested on local/non-supported cloud environment:
+  println!("{}", provider); // "unknown"
 }
 ```
 
 Detect the cloud provider and print the result (with custom timeout; blocking).
 
 ```rust
+use std::time::Duration;
 use cloud_detect::blocking::detect;
 
 fn main() {
-    tracing_subscriber::fmt::init(); // Optional; for logging
+  tracing_subscriber::fmt::init(); // Optional; for logging
 
-    let provider = detect(Some(10)).unwrap();
+  let provider = detect(Some(Duration::from_secs(10))).unwrap();
 
-    // When tested on AWS:
-    println!("{}", provider); // "aws"
+  // When tested on AWS:
+  println!("{}", provider); // "aws"
 
-    // When tested on local/non-supported cloud environment:
-    println!("{}", provider); // "unknown"
+  // When tested on local/non-supported cloud environment:
+  println!("{}", provider); // "unknown"
 }
 ```
 
