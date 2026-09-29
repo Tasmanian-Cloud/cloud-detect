@@ -16,7 +16,7 @@
 //!
 //! ```toml
 //! # ...
-//! cloud_detect = { version = "2", features = ["blocking"] }
+//! cloud_detect = { version = "3", features = ["blocking"] }
 //! tracing-subscriber = { version = "0.3", features = ["env-filter"] } # Optional; for logging
 //! ```
 //!

@@ -9,7 +9,7 @@
 //! ```toml
 //! [dependencies]
 //! # ...
-//! cloud_detect = "2"
+//! cloud_detect = "3"
 //! tokio = { version = "1", features = ["full"] }
 //! tracing-subscriber = { version = "0.3", features = ["env-filter"] } # Optional; for logging
 //! ```
